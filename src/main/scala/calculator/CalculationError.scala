@@ -11,3 +11,4 @@ object CalculationError:
   case object DivisionByZero extends CalculationError("Division by zero.")
   case object UnknownError extends CalculationError("Unknown error: true = false.")
   case object IllegalFactorial extends CalculationError("Illegal factorial parameter.")
+  case object IllegalLogarithm extends CalculationError("Illegal logarithm parameters.")

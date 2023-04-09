@@ -163,6 +163,10 @@ final case class Log(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def copy(l: Calculator = l, r: Calculator = r): Operator = Log(l, r)
 
+  override def error: CalculationError = IllegalLogarithm
+
+  override def predicate: (Double, Double) => Boolean = (l, r) => l > 0 && l != 1 && r > 0
+
 final case class Factorial(l: Calculator = Number(0D), r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = (_, r) => factorial(r)
 
