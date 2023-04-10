@@ -99,11 +99,18 @@ final private case class Addition(l: Calculator, r: Calculator) extends Operator
 final private case class Subtraction(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = _ - _
 
-  override def copy(l: Calculator, r: Calculator): Operator =
-    val newL =
-      if l == EmptyValue then Number(0d)
-      else l
-    Subtraction(newL, r)
+  override def copy(l: Calculator, r: Calculator): Operator = Subtraction(l, r)
+
+  override def value: CalculationResult[Double] =
+    l match
+      case EmptyValue => 
+        for 
+          r <- r.value
+        yield 
+          method(0d, r)
+      case _ => 
+        super.value
+    
 
 final private case class Division(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = _ / _
