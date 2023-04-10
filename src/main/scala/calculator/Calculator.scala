@@ -1,9 +1,7 @@
 package calculator
 
-import scala.annotation.{tailrec, targetName}
+import scala.annotation.tailrec
 import calculator.CalculationError.*
-
-import scala.util.matching.Regex
 
 type CalculationResult[A] = Either[CalculationError, A]
 
@@ -11,7 +9,7 @@ extension [A](v: A) def right: CalculationResult[A] = Right(v)
 
 extension [E <: CalculationError](e: E) def left[A]: CalculationResult[A] = Left(e)
 
-private sealed abstract class Calculator:
+sealed abstract private class Calculator:
   def value: CalculationResult[Double]
 
   def append(that: CalculationResult[Calculator]): CalculationResult[Calculator]
@@ -22,9 +20,9 @@ private sealed abstract class Calculator:
 
   def setAppendAfterPoint(): CalculationResult[Calculator]
 
-private sealed abstract class Value extends Calculator
+sealed abstract private class Value extends Calculator
 
-private final case class Number(content: Double, rDivisor: Int = 10, appendAfterPoint: Boolean = false) extends Value:
+final private case class Number(content: Double, rDivisor: Int = 10, appendAfterPoint: Boolean = false) extends Value:
   override def value: CalculationResult[Double] = content.right
 
   override def append(that: CalculationResult[Calculator]): CalculationResult[Calculator] =
@@ -37,10 +35,8 @@ private final case class Number(content: Double, rDivisor: Int = 10, appendAfter
     Number(value, newDivisor, appendAfterPoint).right
 
   override def setAppendAfterPoint(): CalculationResult[Calculator] =
-    if (appendAfterPoint)
-      IncorrectPointPlacement.left
-    else
-      this.copy(appendAfterPoint = true).right
+    if appendAfterPoint then IncorrectPointPlacement.left
+    else this.copy(appendAfterPoint = true).right
 
 private case object EmptyValue extends Value:
   override def value: CalculationResult[Double] = EmptyInput.left
@@ -51,7 +47,7 @@ private case object EmptyValue extends Value:
 
   override def setAppendAfterPoint(): CalculationResult[Calculator] = Number(0d, appendAfterPoint = true).right
 
-private sealed abstract class Operator(l: Calculator, r: Calculator) extends Calculator:
+sealed abstract private class Operator(l: Calculator, r: Calculator) extends Calculator:
   def method: (Double, Double) => Double
 
   def rightValue: Calculator = r
@@ -77,7 +73,8 @@ private sealed abstract class Operator(l: Calculator, r: Calculator) extends Cal
     for r <- r.append(that)
     yield copy(r = r)
 
-  override def setAppendAfterPoint(): CalculationResult[Calculator] = r.setAppendAfterPoint().map(newR => copy(r = newR))
+  override def setAppendAfterPoint(): CalculationResult[Calculator] =
+    r.setAppendAfterPoint().map(newR => copy(r = newR))
 
   override def push: Operator = this match
     case Division(l, _)  => fall(l)
@@ -94,17 +91,21 @@ private sealed abstract class Operator(l: Calculator, r: Calculator) extends Cal
       case Subtraction(l, r) => Subtraction(l, this.copy(l = r))
       case _                 => this
 
-private final case class Addition(l: Calculator, r: Calculator) extends Operator(l, r):
+final private case class Addition(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = _ + _
 
   override def copy(l: Calculator, r: Calculator): Operator = Addition(l, r)
 
-private final case class Subtraction(l: Calculator, r: Calculator) extends Operator(l, r):
+final private case class Subtraction(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = _ - _
 
-  override def copy(l: Calculator, r: Calculator): Operator = Subtraction(l, r)
+  override def copy(l: Calculator, r: Calculator): Operator =
+    val newL =
+      if l == EmptyValue then Number(0d)
+      else l
+    Subtraction(newL, r)
 
-private final case class Division(l: Calculator, r: Calculator) extends Operator(l, r):
+final private case class Division(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = _ / _
 
   override def predicate: (Double, Double) => Boolean = (_, r) => r != 0d
@@ -113,12 +114,12 @@ private final case class Division(l: Calculator, r: Calculator) extends Operator
 
   override def copy(l: Calculator, r: Calculator): Operator = Division(l, r)
 
-private final case class Product(l: Calculator, r: Calculator) extends Operator(l, r):
+final private case class Product(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = _ * _
 
   override def copy(l: Calculator, r: Calculator): Operator = Product(l, r)
 
-private final case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
+final private case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = scala.math.pow
 
   override def copy(l: Calculator, r: Calculator): Operator = Power(l, r)
@@ -128,7 +129,7 @@ private final case class Power(l: Calculator, r: Calculator) extends Operator(l,
       case _: Value           => this
       case operator: Operator => operator.copy(r = this.copy(l = operator.rightValue, r = r))
 
-private final case class Sin(l: Calculator = Number(0d), r: Calculator) extends Operator(l, r):
+final private case class Sin(l: Calculator = Number(0d), r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = (_, r) => scala.math.sin(r)
 
   override def copy(l: Calculator = l, r: Calculator = r): Operator =
@@ -137,7 +138,7 @@ private final case class Sin(l: Calculator = Number(0d), r: Calculator) extends 
       case _: Calculator => l
     Sin(newL, r)
 
-private final case class Cos(l: Calculator = Number(0d), r: Calculator) extends Operator(l, r):
+final private case class Cos(l: Calculator = Number(0d), r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = (_, r) => scala.math.cos(r)
 
   override def copy(l: Calculator = l, r: Calculator = r): Operator =
@@ -146,7 +147,7 @@ private final case class Cos(l: Calculator = Number(0d), r: Calculator) extends 
       case _: Calculator => l
     Cos(newL, r)
 
-private final case class Log(l: Calculator, r: Calculator) extends Operator(l, r):
+final private case class Log(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = (l, r) => scala.math.log(r) / scala.math.log(l)
 
   override def append(that: Char): CalculationResult[Calculator] = l.append(that).map(l => copy(l = l))
@@ -161,7 +162,7 @@ private final case class Log(l: Calculator, r: Calculator) extends Operator(l, r
 
   override def predicate: (Double, Double) => Boolean = (l, r) => l > 0 && l != 1 && r > 0
 
-private final case class Factorial(l: Calculator = Number(0d), r: Calculator) extends Operator(l, r):
+final private case class Factorial(l: Calculator = Number(0d), r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = (_, r) => factorial(r)
 
   @tailrec
@@ -194,12 +195,14 @@ object Calculator:
   private def formatSource(source: String): String =
     val constReg = """([ep])(\d)""".r
     val logReg   = """(l[ng])(\d+)""".r
+    val minReg   = """([ng^)s/*])-(\d+|e|p)""".r
     val stripped = source.toLowerCase
       .replace(" ", "")
       .replace("pi", "p")
     val constFormatted = constReg.replaceAllIn(stripped, m => s"${m.group(1)}*${m.group(2)}")
     val logFormatted   = logReg.replaceAllIn(constFormatted, m => s"${m.group(1)}(${m.group(2)})")
-    logFormatted
+    val minFormatted   = minReg.replaceAllIn(logFormatted, m => s"${m.group(1)}(-${m.group(2)})")
+    minFormatted
       .replace("sin", "s")
       .replace("cos", "c")
       .replace("ln", "le")
