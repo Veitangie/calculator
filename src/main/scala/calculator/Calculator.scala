@@ -9,7 +9,7 @@ type CalculationResult[A] = Either[CalculationError, A]
 
 extension [A](v: A) def right: CalculationResult[A] = Right(v)
 
-extension [E <: CalculationError, A](e: E) def left: CalculationResult[A] = Left(e)
+extension [E <: CalculationError](e: E) def left[A]: CalculationResult[A] = Left(e)
 
 private sealed abstract class Calculator:
   def value: CalculationResult[Double]
@@ -20,7 +20,7 @@ private sealed abstract class Calculator:
 
   def push: Calculator = this
 
-  def setAppendAfterPoint(): Calculator
+  def setAppendAfterPoint(): CalculationResult[Calculator]
 
 private sealed abstract class Value extends Calculator
 
@@ -36,7 +36,11 @@ private final case class Number(content: Double, rDivisor: Int = 10, appendAfter
       else (content * 10 + that.getNumericValue.doubleValue, rDivisor)
     Number(value, newDivisor, appendAfterPoint).right
 
-  override def setAppendAfterPoint(): Calculator = this.copy(appendAfterPoint = true)
+  override def setAppendAfterPoint(): CalculationResult[Calculator] =
+    if (appendAfterPoint)
+      IncorrectPointPlacement.left
+    else
+      this.copy(appendAfterPoint = true).right
 
 private case object EmptyValue extends Value:
   override def value: CalculationResult[Double] = EmptyInput.left
@@ -45,7 +49,7 @@ private case object EmptyValue extends Value:
 
   override def append(that: Char): CalculationResult[Calculator] = Number(that.getNumericValue.doubleValue).right
 
-  override def setAppendAfterPoint(): Calculator = Number(0d, appendAfterPoint = true)
+  override def setAppendAfterPoint(): CalculationResult[Calculator] = Number(0d, appendAfterPoint = true).right
 
 private sealed abstract class Operator(l: Calculator, r: Calculator) extends Calculator:
   def method: (Double, Double) => Double
@@ -73,7 +77,7 @@ private sealed abstract class Operator(l: Calculator, r: Calculator) extends Cal
     for r <- r.append(that)
     yield copy(r = r)
 
-  override def setAppendAfterPoint(): Calculator = copy(r = r.setAppendAfterPoint())
+  override def setAppendAfterPoint(): CalculationResult[Calculator] = r.setAppendAfterPoint().map(newR => copy(r = newR))
 
   override def push: Operator = this match
     case Division(l, _)  => fall(l)
@@ -238,7 +242,7 @@ object Calculator:
         case ')' =>
           IncorrectParenthesesSequence.left
         case '.' =>
-          constructCalculator(source.tail, acc.map(_.setAppendAfterPoint()))
+          constructCalculator(source.tail, acc.flatMap(_.setAppendAfterPoint()))
         case c =>
           constructCalculator(source.tail, acc.flatMap(res => getSymbol(c, res)))
 
