@@ -1,5 +1,5 @@
 # calculator
-This calculator parses a string and returns the resul of its computation as `Either[CalculationError, Double]`. 
+This calculator parses a string and returns the resul of its computation as `Either[String, Double]`. 
 The string can contain the following symbols:
 - Digits `0-9`
 - Point: `.` - A single point is interpreted as `0`, `.2` is interpreted as `0.2`, `3.2` is interpreted as expected.
