@@ -103,14 +103,11 @@ final private case class Subtraction(l: Calculator, r: Calculator) extends Opera
 
   override def value: CalculationResult[Double] =
     l match
-      case EmptyValue => 
-        for 
-          r <- r.value
-        yield 
-          method(0d, r)
-      case _ => 
+      case EmptyValue =>
+        for r <- r.value
+        yield method(0d, r)
+      case _ =>
         super.value
-    
 
 final private case class Division(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (Double, Double) => Double = _ / _
@@ -189,26 +186,28 @@ final private case class Factorial(l: Calculator = Number(0d), r: Calculator) ex
 
   override def fall(that: Calculator): Operator =
     that match
-      case _: Value           => this.copy(l = Number(0d), r = l)
+      case _: Value           => this
       case operator: Operator => operator.copy(r = this.copy(l = r, r = operator.rightValue))
 
 object Calculator:
-  def calculate(source: String): CalculationResult[Double] =
+  def calculate(source: String): Either[String, Double] =
     constructCalculator(
       formatSource(source).toList
     )
-      .flatMap(_.value)
+      .flatMap(_.value) match
+      case Left(value)  => Left[String, Double](value.toString)
+      case Right(value) => Right[String, Double](value)
 
   private def formatSource(source: String): String =
     val constReg = """([ep])(\d)""".r
-    val logReg   = """(l[ng])(\d+)""".r
-    val minReg   = """([ng^)s/*])-(\d+|e|p)""".r
+    val posReg   = """(l[ng]|\))(\d*\.\d+|\d+)""".r
+    val negReg   = """([ng^)s/*])-(\d*\.\d+|\d+|e|p)""".r
     val stripped = source.toLowerCase
       .replace(" ", "")
       .replace("pi", "p")
     val constFormatted = constReg.replaceAllIn(stripped, m => s"${m.group(1)}*${m.group(2)}")
-    val logFormatted   = logReg.replaceAllIn(constFormatted, m => s"${m.group(1)}(${m.group(2)})")
-    val minFormatted   = minReg.replaceAllIn(logFormatted, m => s"${m.group(1)}(-${m.group(2)})")
+    val logFormatted   = posReg.replaceAllIn(constFormatted, m => s"${m.group(1)}(${m.group(2)})")
+    val minFormatted   = negReg.replaceAllIn(logFormatted, m => s"${m.group(1)}(-${m.group(2)})")
     minFormatted
       .replace("sin", "s")
       .replace("cos", "c")
