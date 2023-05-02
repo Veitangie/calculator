@@ -6,7 +6,7 @@
 
     <groupId>veitangie</groupId>
     <artifactId>calculator_3</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
 
     <name>Calculator_3</name>
     <description>A library that allows to calculate an expression presented in a string form.</description>

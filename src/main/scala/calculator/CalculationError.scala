@@ -13,3 +13,8 @@ object CalculationError:
   case object UnknownError                 extends CalculationError("Unknown error: true = false.")
   case object IllegalFactorial             extends CalculationError("Illegal factorial parameter.")
   case object IllegalLogarithm             extends CalculationError("Illegal logarithm parameters.")
+  case object FailedToProcess              extends CalculationError("Failed to process.")
+  case object IllegalTangent               extends CalculationError("Illegal tangent parameter.")
+  case object IllegalCotangent             extends CalculationError("Illegal cotangent parameter.")
+  case object IllegalAsin                  extends CalculationError("Illegal asin parameter.")
+  case object IllegalAcos                  extends CalculationError("Illegal acos parameter.")
