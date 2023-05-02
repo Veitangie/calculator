@@ -43,7 +43,7 @@ final case class Addition(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def copy(l: Calculator, r: Calculator): Operator = Addition(l, r)
 
-  override def toString: String = "(" + l.toString + "+" + r.toString + ")"
+  override def toString: String = l.toString + "+" + r.toString
 
 final case class Subtraction(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = _ - _
@@ -58,7 +58,7 @@ final case class Subtraction(l: Calculator, r: Calculator) extends Operator(l, r
       case _ =>
         super.value
 
-  override def toString: String = "(" + l.toString + "-" + r.toString + ")"
+  override def toString: String = l.toString + "-" + r.toString
 
 final case class Division(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = _ / _
@@ -69,7 +69,7 @@ final case class Division(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def copy(l: Calculator, r: Calculator): Operator = Division(l, r)
 
-  override def toString: String = "(" + l.toString + "/" + r.toString + ")"
+  override def toString: String = l.toString + "/" + r.toString
 
   override def push: CalculationResult[Calculator] = l match
     case Addition(l, r)         => Addition(l, Division(r, this.r)).right
@@ -82,6 +82,8 @@ final case class Product(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def copy(l: Calculator, r: Calculator): Operator = Product(l, r)
 
+  override def toString: String = l.toString + "*" + r.toString
+
   override def push: CalculationResult[Calculator] = l match
     case Addition(l, r)         => Addition(l, Product(r, this.r)).right
     case Subtraction(l, r)      => Subtraction(l, Product(r, this.r)).right
@@ -93,7 +95,7 @@ final case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def copy(l: Calculator, r: Calculator): Operator = Power(l, r)
 
-  override def toString: String = "(" + l.toString + "^" + r.toString + ")"
+  override def toString: String = l.toString + "^" + r.toString
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -112,7 +114,7 @@ final case class Sin(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Sin(newL, r)
 
-  override def toString: String = "(" + "s" + r.toString + ")"
+  override def toString: String = "s" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -130,7 +132,7 @@ final case class Sinh(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Sinh(newL, r)
 
-  override def toString: String = "(" + "sh" + r.toString + ")"
+  override def toString: String = "sh" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -152,7 +154,7 @@ final case class Asin(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def error: CalculationError = IllegalAsin
 
-  override def toString: String = "(" + "as" + r.toString + ")"
+  override def toString: String = "as" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -170,7 +172,7 @@ final case class Cos(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Cos(newL, r)
 
-  override def toString: String = "(" + "c" + r.toString + ")"
+  override def toString: String = "c" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -188,7 +190,7 @@ final case class Cosh(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Cosh(newL, r)
 
-  override def toString: String = "(" + "ch" + r.toString + ")"
+  override def toString: String = "ch" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -210,7 +212,7 @@ final case class Acos(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Acos(newL, r)
 
-  override def toString: String = "(" + "ac" + r.toString + ")"
+  override def toString: String = "ac" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -232,7 +234,7 @@ final case class Tan(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Tan(newL, r)
 
-  override def toString: String = "(" + "t" + r.toString + ")"
+  override def toString: String = "t" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -254,7 +256,7 @@ final case class Tanh(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Tanh(newL, r)
 
-  override def toString: String = "(" + "th" + r.toString + ")"
+  override def toString: String = "th" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -272,7 +274,7 @@ final case class Atan(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Atan(newL, r)
 
-  override def toString: String = "(" + "at" + r.toString + ")"
+  override def toString: String = "at" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -294,7 +296,7 @@ final case class Cot(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Cot(newL, r)
 
-  override def toString: String = "(" + "ct" + r.toString + ")"
+  override def toString: String = "ct" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -316,7 +318,7 @@ final case class Coth(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Coth(newL, r)
 
-  override def toString: String = "(" + "cth" + r.toString + ")"
+  override def toString: String = "cth" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -334,7 +336,7 @@ final case class Acot(l: Calculator, r: Calculator) extends Operator(l, r):
       case _: Calculator => l
     Acot(newL, r)
 
-  override def toString: String = "(" + "act" + r.toString + ")"
+  override def toString: String = "act" + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
@@ -359,7 +361,7 @@ final case class Log(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def predicate: (BigDecimal, BigDecimal) => Boolean = (l, r) => l > 0 && l != 1 && r > 0
 
-  override def toString: String = "(" + "l" + l.toString + "(" + r.toString + "))"
+  override def toString: String = "l" + l.toString + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator => if op.rightOperand == EmptyValue then op.copy(r = this).right else IncorrectMethodSequence.left
