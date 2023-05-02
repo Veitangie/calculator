@@ -101,7 +101,8 @@ final case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
     case op: Operator =>
       //fixme: For some reason scalac doesn't want to accept `this.copy(...)` due to some weird type conflicts.
       if op.rightOperand == EmptyValue then IncorrectMethodSequence.left
-      else op.copy(r = Power(l = op.rightOperand, r = r)).right
+      else
+        Power(l = op.rightOperand, r = r).push.map(right => op.copy(r = right))
     case _: OperatorConstructor => IncorrectMethodSequence.left
     case _                      => this.right
 
@@ -387,7 +388,7 @@ final case class Factorial(l: Calculator, r: Calculator) extends Operator(l, r):
       .map(_.foldLeft(BigDecimal(1))(_ * _))
 
   @tailrec
-  def factorial(value: BigDecimal, acc: BigDecimal = BigDecimal(1), current: BigDecimal = BigDecimal(1)): BigDecimal =
+  private def factorial(value: BigDecimal, acc: BigDecimal = BigDecimal(1), current: BigDecimal = BigDecimal(1)): BigDecimal =
     if current == value || value == 0 then acc
     else factorial(value, acc * (current + 1), current + 1)
 
