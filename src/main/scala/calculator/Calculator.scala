@@ -106,7 +106,7 @@ final case class OperatorConstructor(prev: Calculator, content: String) extends 
   override def push: CalculationResult[Calculator] = getOperator.flatMap(_.push)
 
 object Calculator:
-  def calculate[F[_]: Parallel: Monad](source: String): F[String] =
+  def calculate[F[_]: Parallel: Monad](source: String): F[Either[String, String]] =
     EitherT
       .fromEither(
         constructCalculator(
@@ -114,11 +114,8 @@ object Calculator:
         )
       )
       .flatMap(r => r.value[F])
+      .bimap(_.toString, _.toString())
       .value
-      .map {
-        case Left(value)  => value.toString
-        case Right(value) => value.toString
-      }
 
   def getStrRep(source: String): String =
     constructCalculator(
