@@ -3,7 +3,6 @@ package calculator
 import calculator.CalculationError.EmptyInput
 import cats.{Monad, Parallel}
 import cats.data.EitherT
-import cats.Applicative
 
 import scala.concurrent.ExecutionContext
 

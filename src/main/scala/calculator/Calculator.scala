@@ -3,7 +3,7 @@ package calculator
 import scala.annotation.tailrec
 import calculator.CalculationError.*
 import cats.data.EitherT
-import cats.{Applicative, Monad, Parallel}
+import cats.{Monad, Parallel}
 import cats.syntax.parallel.*
 import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
@@ -14,7 +14,7 @@ import java.math.MathContext
 import java.math.BigDecimal.*
 import scala.BigDecimal
 import scala.collection.SetOps
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.math.BigDecimal
 import scala.math.BigDecimal.{javaBigDecimal2bigDecimal, RoundingMode}
 import scala.util.Try
@@ -38,6 +38,7 @@ trait Operator(l: Calculator, r: Calculator) extends Calculator:
   def error: CalculationError = UnknownError
 
   def value[F[_]: Parallel: Monad](implicit ec: ExecutionContext): EitherT[F, CalculationError, BigDecimal] =
+    //fixme: There certainly exists a better way to parallelize these computations. I just don't know it yet.
     val rVal = EitherT.liftF(().pure).flatMap(_ => r.value)
     val lVal = EitherT.liftF(().pure).flatMap(_ => l.value)
     (lVal, rVal).parFlatMapN { (lVal, rVal) =>
@@ -87,6 +88,7 @@ final case class OperatorConstructor(prev: Calculator, content: String) extends 
       case "act" => construct(Acot(_, EmptyValue))
       case "t"   => construct(Tan(_, EmptyValue))
       case "th"  => construct(Tanh(_, EmptyValue))
+      case "^"   => construct(Power(_, EmptyValue))
       case "+"   => construct(Addition(_, EmptyValue))
       case "-"   => construct(Subtraction(_, EmptyValue))
       case "/"   => construct(Division(_, EmptyValue))

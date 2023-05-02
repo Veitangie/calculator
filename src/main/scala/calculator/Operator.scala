@@ -1,9 +1,33 @@
 package calculator
 
-import calculator.CalculationError.{DivisionByZero, FailedToProcess, IllegalAcos, IllegalAsin, IllegalCotangent, IllegalFactorial, IllegalLogarithm, IllegalTangent, IncorrectMethodSequence, UnknownError}
-import cats.{Applicative, Monad, Parallel}
+import calculator.CalculationError.{
+  DivisionByZero,
+  IllegalAcos,
+  IllegalAsin,
+  IllegalCotangent,
+  IllegalFactorial,
+  IllegalLogarithm,
+  IllegalTangent,
+  IncorrectMethodSequence
+}
+import cats.{Monad, Parallel}
 import cats.data.EitherT
-import ch.obermuhlner.math.big.BigDecimalMath.{acos, acot, asin, atan, cos, cosh, cot, coth, log, pow, sin, sinh, tan, tanh}
+import ch.obermuhlner.math.big.BigDecimalMath.{
+  acos,
+  acot,
+  asin,
+  atan,
+  cos,
+  cosh,
+  cot,
+  coth,
+  log,
+  pow,
+  sin,
+  sinh,
+  tan,
+  tanh
+}
 import cats.syntax.parallel.*
 import cats.syntax.applicative.*
 import cats.syntax.functor.*
@@ -72,8 +96,10 @@ final case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
   override def toString: String = "(" + l.toString + "^" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
-    case Addition(l, r)         => Addition(l, Power(r, this.r)).right
-    case Subtraction(l, r)      => Subtraction(l, Power(r, this.r)).right
+    case op: Operator =>
+      //fixme: For some reason scalac doesn't want to accept `this.copy(...)` due to some weird type conflicts.
+      if op.rightOperand == EmptyValue then IncorrectMethodSequence.left
+      else op.copy(r = Power(l = op.rightOperand, r = r)).right
     case _: OperatorConstructor => IncorrectMethodSequence.left
     case _                      => this.right
 
@@ -353,7 +379,7 @@ final case class Factorial(l: Calculator, r: Calculator) extends Operator(l, r):
       )
       .toVector
       .parTraverse { case (start, end) =>
-        //fixme There certainly exists a better way to parallelize these computations. I just don't know it yet.
+        //fixme: There certainly exists a better way to parallelize these computations. I just don't know it yet.
         ().pure.map(_ => factorial(end, start, start))
       }
       .map(_.foldLeft(BigDecimal(1))(_ * _))
