@@ -75,10 +75,9 @@ final case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      //fixme: For some reason scalac doesn't want to accept `this.copy(...)` due to some weird type conflicts.
       if op.rightOperand == EmptyValue then IncorrectMethodSequence.left
       else
-        Power(l = op.rightOperand, r = r).push.map(right => op.withValues(r = right))
+        withValues(l = op.rightOperand).push.map(right => op.withValues(r = right))
     case _: OperatorConstructor => IncorrectMethodSequence.left
     case _                      => this.right
 
