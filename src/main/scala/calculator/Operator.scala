@@ -1,7 +1,7 @@
 package calculator
 
 import calculator.CalculationError.*
-import cats.{Monad, Parallel, Eval}
+import cats.{Eval, Monad, Parallel}
 import cats.data.EitherT
 import ch.obermuhlner.math.big.BigDecimalMath.*
 import cats.syntax.parallel.*
@@ -76,8 +76,7 @@ final case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
       if op.rightOperand == EmptyValue then IncorrectMethodSequence.left
-      else
-        withValues(l = op.rightOperand).push.map(right => op.withValues(r = right))
+      else withValues(l = op.rightOperand).push.map(right => op.withValues(r = right))
     case _: OperatorConstructor => IncorrectMethodSequence.left
     case _                      => this.right
 
@@ -340,8 +339,9 @@ final case class Log(l: Calculator, r: Calculator) extends Operator(l, r):
   override def toString: String = "l" + l.toString + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
-    case op: Operator => if op.rightOperand == EmptyValue then op.withValues(r = this).right else IncorrectMethodSequence.left
-    case _: Value     => this.right
+    case op: Operator =>
+      if op.rightOperand == EmptyValue then op.withValues(r = this).right else IncorrectMethodSequence.left
+    case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
 
 final case class Factorial(l: Calculator, r: Calculator) extends Operator(l, r):
@@ -357,13 +357,17 @@ final case class Factorial(l: Calculator, r: Calculator) extends Operator(l, r):
       )
       .toVector
       .parTraverse { case (start, end) =>
-        //fixme: There certainly exists a better way to parallelize these computations. I just don't know it yet.
+        // fixme: There certainly exists a better way to parallelize these computations. I just don't know it yet.
         ().pure.map(_ => factorial(end, start, start))
       }
       .map(_.foldLeft(BigDecimal(1))(_ * _))
 
   @tailrec
-  private def factorial(value: BigDecimal, acc: BigDecimal = BigDecimal(1), current: BigDecimal = BigDecimal(1)): BigDecimal =
+  private def factorial(
+    value: BigDecimal,
+    acc: BigDecimal = BigDecimal(1),
+    current: BigDecimal = BigDecimal(1)
+  ): BigDecimal =
     if current == value || value == 0 then acc
     else factorial(value, acc * (current + 1), current + 1)
 
