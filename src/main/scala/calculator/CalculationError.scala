@@ -18,3 +18,4 @@ object CalculationError:
   case object IllegalCotangent             extends CalculationError("Illegal cotangent parameter.")
   case object IllegalAsin                  extends CalculationError("Illegal asin parameter.")
   case object IllegalAcos                  extends CalculationError("Illegal acos parameter.")
+  case object IncorrectCharacterSequence   extends CalculationError("Incorrect character sequence.")

@@ -1,33 +1,9 @@
 package calculator
 
-import calculator.CalculationError.{
-  DivisionByZero,
-  IllegalAcos,
-  IllegalAsin,
-  IllegalCotangent,
-  IllegalFactorial,
-  IllegalLogarithm,
-  IllegalTangent,
-  IncorrectMethodSequence
-}
-import cats.{Monad, Parallel}
+import calculator.CalculationError.*
+import cats.{Monad, Parallel, Eval}
 import cats.data.EitherT
-import ch.obermuhlner.math.big.BigDecimalMath.{
-  acos,
-  acot,
-  asin,
-  atan,
-  cos,
-  cosh,
-  cot,
-  coth,
-  log,
-  pow,
-  sin,
-  sinh,
-  tan,
-  tanh
-}
+import ch.obermuhlner.math.big.BigDecimalMath.*
 import cats.syntax.parallel.*
 import cats.syntax.applicative.*
 import cats.syntax.functor.*
@@ -41,14 +17,14 @@ import scala.language.postfixOps
 final case class Addition(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = _ + _
 
-  override def copy(l: Calculator, r: Calculator): Operator = Addition(l, r)
+  override def withValues(l: Calculator, r: Calculator): Operator = Addition(l, r)
 
   override def toString: String = l.toString + "+" + r.toString
 
 final case class Subtraction(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = _ - _
 
-  override def copy(l: Calculator, r: Calculator): Operator = Subtraction(l, r)
+  override def withValues(l: Calculator, r: Calculator): Operator = Subtraction(l, r)
 
   override def value[F[_]: Parallel: Monad](implicit ec: ExecutionContext): EitherT[F, CalculationError, BigDecimal] =
     l match
@@ -67,7 +43,7 @@ final case class Division(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def error: CalculationError = DivisionByZero
 
-  override def copy(l: Calculator, r: Calculator): Operator = Division(l, r)
+  override def withValues(l: Calculator, r: Calculator): Operator = Division(l, r)
 
   override def toString: String = l.toString + "/" + r.toString
 
@@ -80,7 +56,7 @@ final case class Division(l: Calculator, r: Calculator) extends Operator(l, r):
 final case class Product(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = _ * _
 
-  override def copy(l: Calculator, r: Calculator): Operator = Product(l, r)
+  override def withValues(l: Calculator, r: Calculator): Operator = Product(l, r)
 
   override def toString: String = l.toString + "*" + r.toString
 
@@ -93,7 +69,7 @@ final case class Product(l: Calculator, r: Calculator) extends Operator(l, r):
 final case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (l, r) => pow(l.bigDecimal, r.bigDecimal, context)
 
-  override def copy(l: Calculator, r: Calculator): Operator = Power(l, r)
+  override def withValues(l: Calculator, r: Calculator): Operator = Power(l, r)
 
   override def toString: String = l.toString + "^" + r.toString
 
@@ -102,14 +78,14 @@ final case class Power(l: Calculator, r: Calculator) extends Operator(l, r):
       //fixme: For some reason scalac doesn't want to accept `this.copy(...)` due to some weird type conflicts.
       if op.rightOperand == EmptyValue then IncorrectMethodSequence.left
       else
-        Power(l = op.rightOperand, r = r).push.map(right => op.copy(r = right))
+        Power(l = op.rightOperand, r = r).push.map(right => op.withValues(r = right))
     case _: OperatorConstructor => IncorrectMethodSequence.left
     case _                      => this.right
 
 final case class Sin(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (_, r) => sin(r.bigDecimal, context)
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -119,7 +95,7 @@ final case class Sin(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -127,7 +103,7 @@ final case class Sin(l: Calculator, r: Calculator) extends Operator(l, r):
 final case class Sinh(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (_, r) => sinh(r.bigDecimal, context)
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -137,7 +113,7 @@ final case class Sinh(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -145,7 +121,7 @@ final case class Sinh(l: Calculator, r: Calculator) extends Operator(l, r):
 final case class Asin(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (_, r) => asin(r.bigDecimal, context)
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -159,7 +135,7 @@ final case class Asin(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -167,7 +143,7 @@ final case class Asin(l: Calculator, r: Calculator) extends Operator(l, r):
 final case class Cos(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (_, r) => cos(r.bigDecimal, context)
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -177,7 +153,7 @@ final case class Cos(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -185,7 +161,7 @@ final case class Cos(l: Calculator, r: Calculator) extends Operator(l, r):
 final case class Cosh(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (_, r) => cosh(r.bigDecimal, context)
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -195,7 +171,7 @@ final case class Cosh(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -207,7 +183,7 @@ final case class Acos(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def error: CalculationError = IllegalAcos
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -217,7 +193,7 @@ final case class Acos(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -229,7 +205,7 @@ final case class Tan(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def error: CalculationError = IllegalTangent
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -239,7 +215,7 @@ final case class Tan(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -251,7 +227,7 @@ final case class Tanh(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def error: CalculationError = IllegalTangent
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -261,7 +237,7 @@ final case class Tanh(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -269,7 +245,7 @@ final case class Tanh(l: Calculator, r: Calculator) extends Operator(l, r):
 final case class Atan(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (_, r) => atan(r.bigDecimal, context)
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -279,7 +255,7 @@ final case class Atan(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -291,7 +267,7 @@ final case class Cot(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def error: CalculationError = IllegalCotangent
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -301,7 +277,7 @@ final case class Cot(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -313,7 +289,7 @@ final case class Coth(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def error: CalculationError = IllegalCotangent
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -323,7 +299,7 @@ final case class Coth(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -331,7 +307,7 @@ final case class Coth(l: Calculator, r: Calculator) extends Operator(l, r):
 final case class Acot(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (_, r) => acot(r.bigDecimal, context)
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     val newL = l match
       case EmptyValue    => Number("0")
       case _: Calculator => l
@@ -341,7 +317,7 @@ final case class Acot(l: Calculator, r: Calculator) extends Operator(l, r):
 
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
-      if op.rightOperand == EmptyValue then op.copy(r = this.copy(l = EmptyValue)).right
+      if op.rightOperand == EmptyValue then op.withValues(r = this.withValues(l = EmptyValue)).right
       else IncorrectMethodSequence.left
     case _: Value               => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
@@ -350,13 +326,13 @@ final case class Log(l: Calculator, r: Calculator) extends Operator(l, r):
   override def method: (BigDecimal, BigDecimal) => BigDecimal = (l, r) =>
     log(r.bigDecimal, context) / log(l.bigDecimal, context)
 
-  override def append(that: Char): CalculationResult[Calculator] = l.append(that).map(l => copy(l = l))
+  override def append(that: Char): CalculationResult[Calculator] = l.append(that).map(l => withValues(l = l))
 
   override def append(that: CalculationResult[Calculator]): CalculationResult[Operator] =
-    if l == EmptyValue then l.append(that).map(l => copy(l = l))
+    if l == EmptyValue then l.append(that).map(l => withValues(l = l))
     else super.append(that)
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator = Log(l, r)
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator = Log(l, r)
 
   override def error: CalculationError = IllegalLogarithm
 
@@ -365,7 +341,7 @@ final case class Log(l: Calculator, r: Calculator) extends Operator(l, r):
   override def toString: String = "l" + l.toString + "(" + r.toString + ")"
 
   override def push: CalculationResult[Calculator] = l match
-    case op: Operator => if op.rightOperand == EmptyValue then op.copy(r = this).right else IncorrectMethodSequence.left
+    case op: Operator => if op.rightOperand == EmptyValue then op.withValues(r = this).right else IncorrectMethodSequence.left
     case _: Value     => this.right
     case _: OperatorConstructor => IncorrectMethodSequence.left
 
@@ -403,7 +379,7 @@ final case class Factorial(l: Calculator, r: Calculator) extends Operator(l, r):
       res <- EitherT.liftF(parallelFactorial(r))
     yield res
 
-  override def copy(l: Calculator = l, r: Calculator = r): Operator =
+  override def withValues(l: Calculator = l, r: Calculator = r): Operator =
     Factorial(l, r)
 
   override def toString: String = r.toString + "!"
@@ -411,7 +387,7 @@ final case class Factorial(l: Calculator, r: Calculator) extends Operator(l, r):
   override def push: CalculationResult[Calculator] = l match
     case op: Operator =>
       if op.rightOperand == EmptyValue then IncorrectMethodSequence.left
-      else op.copy(r = this.copy(l = EmptyValue, r = op.rightOperand)).right
+      else op.withValues(r = this.withValues(l = EmptyValue, r = op.rightOperand)).right
     case EmptyValue             => this.right
-    case _: Value               => this.copy(l = EmptyValue, r = l).right
+    case _: Value               => this.withValues(l = EmptyValue, r = l).right
     case _: OperatorConstructor => IncorrectMethodSequence.left

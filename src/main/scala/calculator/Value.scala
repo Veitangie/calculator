@@ -1,15 +1,16 @@
 package calculator
 
-import calculator.CalculationError.EmptyInput
+import calculator.CalculationError.{EmptyInput, IncorrectPointPlacement}
 import cats.{Monad, Parallel}
 import cats.data.EitherT
 
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 final case class Number(content: String) extends Value:
   override def value[F[_]: Parallel: Monad](implicit ec: ExecutionContext): EitherT[F, CalculationError, BigDecimal] =
     if content.isBlank then EitherT.fromEither(EmptyInput.left)
-    else EitherT.fromEither(java.math.BigDecimal(content).right)
+    else EitherT.fromOption(Try(BigDecimal(content)).toOption, IncorrectPointPlacement)
 
   override def append(that: CalculationResult[Calculator]): CalculationResult[Calculator] =
     that.map(r => Product(this, r))

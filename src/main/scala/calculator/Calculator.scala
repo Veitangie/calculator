@@ -38,7 +38,7 @@ trait Operator(l: Calculator, r: Calculator) extends Calculator:
   def error: CalculationError = UnknownError
 
   def value[F[_]: Parallel: Monad](implicit ec: ExecutionContext): EitherT[F, CalculationError, BigDecimal] =
-    //fixme: There certainly exists a better way to parallelize these computations. I just don't know it yet.
+    // fixme: There certainly exists a better way to parallelize these computations. I just don't know it yet.
     val rVal = EitherT.liftF(().pure).flatMap(_ => r.value)
     val lVal = EitherT.liftF(().pure).flatMap(_ => l.value)
     (lVal, rVal).parFlatMapN { (lVal, rVal) =>
@@ -48,13 +48,13 @@ trait Operator(l: Calculator, r: Calculator) extends Calculator:
       yield res
     }
 
-  def copy(l: Calculator = l, r: Calculator = r): Operator
+  def withValues(l: Calculator = l, r: Calculator = r): Operator
 
   def append(that: CalculationResult[Calculator]): CalculationResult[Operator] =
-    r.append(that).map(r => copy(r = r))
+    r.append(that).map(r => withValues(r = r))
 
   override def append(that: Char): CalculationResult[Calculator] =
-    r.append(that).map(r => copy(r = r))
+    r.append(that).map(r => withValues(r = r))
 
 trait Value extends Calculator
 
@@ -88,22 +88,13 @@ final case class OperatorConstructor(prev: Calculator, content: String) extends 
       case "act" => construct(Acot(_, EmptyValue))
       case "t"   => construct(Tan(_, EmptyValue))
       case "th"  => construct(Tanh(_, EmptyValue))
-      case "^"   => construct(Power(_, EmptyValue))
-      case "+"   => construct(Addition(_, EmptyValue))
-      case "-"   => construct(Subtraction(_, EmptyValue))
-      case "/"   => construct(Division(_, EmptyValue))
-      case "*"   => construct(Product(_, EmptyValue))
-      case "!"   => construct(Factorial(_, EmptyValue))
-      case s"!$other" =>
-        for
-          factorial <- construct(Factorial(_, EmptyValue))
-          res       <- factorial.push
-        yield OperatorConstructor(res, other)
-      case "l" => prev.append(Log(EmptyValue, EmptyValue).right)
-      case ")" => IncorrectParenthesesSequence.left
-      case _   => UnknownCharacter.left
+      case _     => UnknownCharacter.left
 
   override def push: CalculationResult[Calculator] = getOperator.flatMap(_.push)
+
+object OperatorConstructor:
+  def apply(prev: Calculator, content: Char): OperatorConstructor =
+    new OperatorConstructor(prev, content.toString)
 
 object Calculator:
   def calculate[F[_]: Parallel: Monad](source: String): F[Either[String, String]] =
@@ -172,10 +163,45 @@ object Calculator:
           val (tail, layer) = collectLayer(source.tail)
           constructCalculator(tail, acc.flatMap(_.append(layer.map(Parentheses.apply))))
         case c =>
-          val newAcc = acc.flatMap(_ match
-            case oc: OperatorConstructor => oc.append(c)
-            case calc: Calculator if c.isDigit || c == '.' || c == 'e' || c == 'p' =>
-              calc.append(c)
-            case calc: Calculator => OperatorConstructor(calc, c.toString).right
-          )
+          val newAcc = acc.flatMap(getSymbol(c, _))
           constructCalculator(source.tail, newAcc)
+
+  private def getSymbol(symbol: Char, prev: Calculator): CalculationResult[Calculator] =
+    def construct(
+      constructor: Calculator => Calculator
+    ): CalculationResult[Calculator] =
+      prev.push.map(constructor)
+
+    symbol match
+      case c if c.isDigit || c == '.' => prev.append(c)
+      case 'e'                        => prev.append(Number(E).right).flatMap(_.push)
+      case 'p'                        => prev.append(Number(P).right).flatMap(_.push)
+      case 'a' =>
+        prev match
+          case _: OperatorConstructor => IncorrectCharacterSequence.left
+          case calc: Calculator       => OperatorConstructor(calc, symbol).right
+      case 'c' =>
+        prev match
+          case oc: OperatorConstructor => oc.append(symbol)
+          case calc: Calculator        => OperatorConstructor(calc, symbol).right
+      case 's' =>
+        prev match
+          case oc: OperatorConstructor => oc.append(symbol)
+          case calc: Calculator        => OperatorConstructor(calc, symbol).right
+      case 't' =>
+        prev match
+          case oc: OperatorConstructor => oc.append(symbol)
+          case calc: Calculator        => OperatorConstructor(calc, symbol).right
+      case 'h' =>
+        prev match
+          case oc: OperatorConstructor => oc.append(symbol)
+          case _: Calculator           => IncorrectCharacterSequence.left
+      case '^' => construct(Power(_, EmptyValue))
+      case '+' => construct(Addition(_, EmptyValue))
+      case '-' => construct(Subtraction(_, EmptyValue))
+      case '/' => construct(Division(_, EmptyValue))
+      case '*' => construct(Product(_, EmptyValue))
+      case '!' => construct(Factorial(_, EmptyValue))
+      case 'l' => prev.append(Log(EmptyValue, EmptyValue).right)
+      case ')' => IncorrectParenthesesSequence.left
+      case _   => UnknownCharacter.left
