@@ -1,6 +1,6 @@
 # calculator
-This calculator parses a string and returns the resul of its computation as `Either[String, String]`. 
-The string can contain the following symbols:
+This calculator parses a string and returns the result of its computation as `Either[String, String]`. 
+The input string can contain the following symbols:
 - Digits `0-9`
 - Point: `.` - A single point is interpreted as `0`, `.2` is interpreted as `0.2`, `3.2` is interpreted as expected.
 - Simple operators: `+`, `-`, `/`, `*` - they work mostly as expected, the order of computations is maintained (`1 + 2 * 3 = 7`). 
